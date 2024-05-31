@@ -1,0 +1,2 @@
+#Does not add the target directory into git repository
+/target

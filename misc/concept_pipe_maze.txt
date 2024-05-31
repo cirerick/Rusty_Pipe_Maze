@@ -1,0 +1,31 @@
+Drawing pipe maze
+
+⋆
+|   |
+O---O
+|   |
+O---O
+|   |
+♥
+
+U+2665 ♥
+&#8902 ⋆
+
+--initialize 2 dimensional array
+--start from bottom of first path. 
+1. loop
+2. print '|' and then three ' ' until last col is reached	
+	Ex. [|][ ][ ][ ][|]
+3. Go to the next to row above to print a bridge
+4. every 4th elem is a path, look for node id of 0 or 1 <- increment by 1 after
+	1. when node is found on that path print O---O
+	2. then keep printing '|' until the last col is met,
+4. loop again
+
+
+
+So for every 4th elm print |, otherwise ' '
+
+
+learn caching to speed up	
+
