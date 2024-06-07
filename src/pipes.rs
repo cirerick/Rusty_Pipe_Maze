@@ -5,7 +5,7 @@ mod math;
 mod cin;
 
 #[path = "resu.rs"]
-mod resu;
+pub mod resu;
 
 use std::alloc::alloc;
 use std::alloc::handle_alloc_error;
@@ -44,7 +44,7 @@ struct Node<T> {
 }
 
 #[derive(Debug)]
-struct Path<T> {
+pub struct Path<T> {
     id: u8, //incremented with each node spawn
     start: *mut Node<T>, //will act as the 'head' of the list
     goal: Option<*mut Node<T>>, //if null/none no goal //act as tail of list
@@ -52,7 +52,7 @@ struct Path<T> {
 
 #[derive(Debug)]
 pub struct Map<T> {
-    path_list: Vec<Path<T>>,
+    pub path_list: Vec<Path<T>>,
 }
 
 impl<T> Node<T> {
@@ -85,7 +85,11 @@ impl<T> Node<T> {
             return self
         }
     } //what happens if id does not exist in list //it will return tail node
-
+/* 
+    fn get_self_address(&mut self) -> *mut Node<T> {
+        return unsafe {&mut *self}
+    }
+*/
     fn set_next(&mut self, id: u8, data: T, path_id: u8) { //rewrite as recursive function
         unsafe {
             if !(self.next.is_null()) {
@@ -135,6 +139,7 @@ impl<T> Node<T> {
             }
         }
 
+
     }
 
 
@@ -167,11 +172,12 @@ impl<T: std::fmt::Debug> Path<T> {
     }
 
     /*
-    id_a should be the id needed to find the node on path_a to bridge to the node with id_b
-    on path_b. 
-    Essentially:
-    path_a.bridge(id_a) = path_b.bridge
-    path_b.bridge(id_b) = path_b.bridge
+        id_a should be the id needed to find the node on path_a to bridge to the node with id_b
+        on path_b. 
+        Essentially:
+        path_a.bridge(id_a) = path_b.bridge
+        path_b.bridge(id_b) = path_b.bridge
+
      */
     fn set_bridge(path_a: &Path<T>, path_b: &Path<T>, id_a: u8, id_b: u8) {
         Node::set_bridge(path_a.start, path_b.start, id_a, id_b); 
@@ -236,14 +242,20 @@ pub fn spawn_map<T: std::fmt::Debug>(path_n: u8, bridge_n: u8) -> Map<i32> {
         map.path_list.push(Path::new(_i));
     }
 
+    //push head node onto each new path
+    for _i in 0..path_n {
+        map.path_list[_i as usize].push(0, _i as i32);
+    }
+
+
     //create instance of an rng threaded object
     let mut rng: ThreadRng = rand::thread_rng();
     
     //populate nodes and create bridges
-    for _i in 0..bridge_n {
+    for _i in 1..(bridge_n + 1) {
         let mut rand: i8 = rng.gen_range(0..map.path_list.len()) as i8;//can be -1 or 1, but not 0    
         //store incrementation of first node_id
-        let temp_node_id: i16 = (pos_exponent(_i as usize, 2) as i16) - ((pos_exponent(_i as usize, 2) as i16 ) - ((_i as i16) * 2));
+        let temp_node_id: i16 = (pos_exponent(_i as usize, 2) as i16) - ((pos_exponent(_i as usize, 2) as i16 ) - ((_i as i16) * 2)) - 1;
 
         //check if first node is on the last or second path
         match rand {
@@ -295,15 +307,15 @@ pub fn spawn_map<T: std::fmt::Debug>(path_n: u8, bridge_n: u8) -> Map<i32> {
     return map
 }
 
-//TODO: work on drawing it out MORE
+//DRAWING METHODS
 
 pub fn generate_map_drawing<T: std::fmt::Debug>(map: &Map<T>, path_n: u8, bridge_n: u8) -> Vec<Vec<char>> {
     //cache pointers to lists
     let mut cached_lists: Vec<Option<&Node<T>>> = Vec::with_capacity(path_n as usize); 
 
-    //fill cache
+    //fill cache //skip the initial head
     for _i in 0..path_n as usize {
-        cached_lists.push(unsafe {Some(&(*(map.path_list[_i].start)))});
+        cached_lists.push(unsafe {Some(&(*(*(map.path_list[_i].start)).next))});
     }
     
     //save last user/heart position
@@ -359,7 +371,7 @@ pub fn generate_map_drawing<T: std::fmt::Debug>(map: &Map<T>, path_n: u8, bridge
 
                         loop{
                             match ptr.id {
-                                _id if _id == (_i as u8) - 1 || _id == (_i as u8 - 2) => {
+                                _id if _id == (_i as u8) - 1 || _id == (_i as u8) => {
                                     //the issue is _j continously changes with the third case
                                     unsafe {
                                         match ptr.bridged.as_ref() {
@@ -445,4 +457,122 @@ pub fn draw_map(matrix: &Vec<Vec<char>>, path_n: u8, bridge_n: u8) {
     }
 }
 
-//TODO:: Work on creating user
+//check something
+
+pub fn next_step<T>(map_drawing: &mut Vec<Vec<char>>, resu: &mut resu::User<T>, prev_ascii: &mut char, running: &mut bool, path_n: u8, bridge_n: u8) {
+    //check postion above the user
+    match map_drawing[resu.ascii_pos.1 - 1][resu.ascii_pos.0] {
+        'O' => {
+            //call user::next
+            resu.next(running);
+            //update graphic to previous 
+            map_drawing[resu.ascii_pos.1][resu.ascii_pos.0] = *prev_ascii; 
+            resu.ascii_pos.1 -= 1;
+            *prev_ascii = map_drawing[resu.ascii_pos.1][resu.ascii_pos.0];
+            map_drawing[resu.ascii_pos.1][resu.ascii_pos.0] = '♥';
+            clear_wait();
+            draw_map(&map_drawing, path_n, bridge_n); 
+            println!("Current pos in memory: {:p}", resu.pipe_pos);
+            
+            
+            //call user::cross 
+            
+            //move user to the side until next 'O'
+            unsafe {
+                match resu.pipe_pos.as_ref() {    //check for side
+                    Some(node) => {
+                        match node.side {
+                            Side::R => {
+                                resu.cross(running);
+
+                                //always check if running
+                                if *running {
+                                    for _i in 0..4 {
+                                        map_drawing[resu.ascii_pos.1][resu.ascii_pos.0] = *prev_ascii;
+                                        resu.ascii_pos.0 -= 1;
+                                        *prev_ascii =  map_drawing[resu.ascii_pos.1][resu.ascii_pos.0];
+                                        map_drawing[resu.ascii_pos.1][resu.ascii_pos.0] = '♥';
+                                        clear_wait();
+                                        draw_map(&map_drawing, path_n, bridge_n);
+                                        println!("Current pos in memory: {:p}", resu.pipe_pos);
+                                    }
+
+                                } 
+                            },
+                            Side::L => {
+                                resu.cross(running);
+
+                                //check if running
+                                if *running {
+                                    for _i in 0..4 {
+                                        map_drawing[resu.ascii_pos.1][resu.ascii_pos.0] = *prev_ascii;
+                                        resu.ascii_pos.0 += 1;
+                                        *prev_ascii =  map_drawing[resu.ascii_pos.1][resu.ascii_pos.0];
+                                        map_drawing[resu.ascii_pos.1][resu.ascii_pos.0] = '♥'; 
+                                        clear_wait();
+                                        draw_map(&map_drawing, path_n, bridge_n);
+                                        println!("Current pos in memory: {:p}", resu.pipe_pos);
+                                    }
+
+                                }
+                            },
+                            Side::None => {println!("Something happened here we aren't aware of"); *running = false;},
+                        }
+                    },
+                    None => {
+                        println!("Entered checking self if null, it has been found to be null."); *running = false;
+                    }
+                }
+            } 
+            //with each movement replace previous position with appropriate char
+        },
+        '|' => {
+            //move user graphicially up
+            //replace previous position with '|'
+            map_drawing[resu.ascii_pos.1][resu.ascii_pos.0] = *prev_ascii; 
+            resu.ascii_pos.1 -= 1;
+            *prev_ascii = map_drawing[resu.ascii_pos.1][resu.ascii_pos.0];
+            map_drawing[resu.ascii_pos.1][resu.ascii_pos.0] = '♥'; 
+            clear_wait();
+            draw_map(&map_drawing, path_n, bridge_n);
+            println!("Current pos in memory: {:p}", resu.pipe_pos);
+
+        }
+        _ => {
+            //assume it has reached the end check if it is out of bounds ' ' and prev is as an '|' or a 'O'
+            //lose
+            //else
+            //win
+            //duct tape time, i want to be done with this project
+            resu.next(running);
+            if *running {
+                map_drawing[resu.ascii_pos.1][resu.ascii_pos.0] = *prev_ascii; 
+                resu.ascii_pos.1 -= 1;
+                *prev_ascii = map_drawing[resu.ascii_pos.1][resu.ascii_pos.0];
+                map_drawing[resu.ascii_pos.1][resu.ascii_pos.0] = '♥';
+                clear_wait();
+                println!("\n=End Reached=\n");
+                draw_map(&map_drawing, path_n, bridge_n); 
+                println!("Current pos in memory: {:p}", resu.pipe_pos);
+                resu.next(running);
+            } else {
+                map_drawing[resu.ascii_pos.1][resu.ascii_pos.0] = *prev_ascii; 
+                resu.ascii_pos.1 -= 1;
+                *prev_ascii = map_drawing[resu.ascii_pos.1][resu.ascii_pos.0];
+                map_drawing[resu.ascii_pos.1][resu.ascii_pos.0] = '♥';
+                clear_wait();
+                println!("\n=End Reached=\n");
+                draw_map(&map_drawing, path_n, bridge_n); 
+                println!("Current pos in memory: {:p}", resu.pipe_pos);
+                resu.next(running);
+            }
+        }  
+    }
+    
+}
+
+
+fn clear_wait() {
+    print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
+    std::thread::sleep(std::time::Duration::new(0, 100000000));
+}

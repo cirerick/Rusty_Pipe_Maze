@@ -1,3 +1,5 @@
+use crate::pipes;
+
 use crate::pipes::Node;
 
 
@@ -6,37 +8,38 @@ we do not need to import anything
 
 
 */
-
-struct User<T> {
-    pos: *mut Node<T>,
+#[derive(Debug)]
+pub struct User<T> {
+    pub pipe_pos: *mut Node<T>,
+    pub ascii_pos: (usize, usize),
 }
 
 impl<T> User<T>{
-    fn new(pos: *mut Node<T>) -> Self {
-        return User {pos: pos}
+    pub fn new(path: &pipes::Path<T>, start_pos_x: usize, start_pos_y: usize) -> Self {
+        return User {pipe_pos: path.start,
+                     ascii_pos: (start_pos_x, start_pos_y),        
+                }
     }
     
     
-    fn next(&mut self) {
+    pub fn next(&mut self, running: &mut bool) {
         unsafe {
-            if !((*(self.pos)).next.is_null()) {
-                self.pos = (*(self.pos)).next;
-            } else if (*(self.pos)).id == 255 {
-                println!("WINNER");
+            if !((*(self.pipe_pos)).next.is_null()) {
+                self.pipe_pos = (*(self.pipe_pos)).next;
+            } else if (*(self.pipe_pos)).id == 255 {
+                println!("WON");
+                *running = false;
             } else {
-                println!("LOSER");
+                println!("LOSS");
+                *running = false;
             }
         }
     }
 
-    fn cross(&mut self) {
+    pub fn cross(&mut self, running: &mut bool) {
         unsafe {
-            if !(((*self.pos)).bridged.is_null()) {
-                self.pos = (*(self.pos)).next;
-            } else if (*(self.pos)).id == 255 {
-                println!("WINNER");
-            } else {
-                println!("LOSER");
+            if !(((*self.pipe_pos)).bridged.is_null()) {
+                self.pipe_pos = (*(self.pipe_pos)).bridged;
             } 
         }
     } 
