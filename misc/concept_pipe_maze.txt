@@ -6,7 +6,7 @@ O---O
 |   |
 O---O
 |   |
-♥
+♥	X
 
 U+2665 ♥
 &#8902 ⋆
@@ -27,5 +27,4 @@ U+2665 ♥
 So for every 4th elm print |, otherwise ' '
 
 
-learn caching to speed up	
 

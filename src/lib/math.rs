@@ -4,7 +4,7 @@ pub fn pos_exponent(base: usize, power: usize) -> usize {
     }
 
     let mut result: usize = base;
-    for _i in 0..power {
+    for _i in 1..power {
         result = result * base;
     }
 
