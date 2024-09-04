@@ -10,4 +10,5 @@ My main goal here was to create a 1:1 memory layout of Pipe Mazes physical appea
 <img src="https://github.com/cirerick/Rusty_Pipe_Maze/blob/master/misc/rustypipes_democlip.gif" width="30%"/>
 
 Although linked lists are highly advised against (especially doubly linked list), I believed this data structure was the best way to demonstrate connectivity throughout the maze. The program will follow where the player pointer as it traverses appointing to each node, where the node appoints to some memory address.  
+<br/>
 The program can be easily ran by cloning the repository, going into the directory where it was cloned and typing into the terminal `cargo run`.
